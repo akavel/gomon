@@ -221,7 +221,7 @@ func main() {
 				go func(dir string) {
 					// duration to avoid to run commands frequency at once
 					select {
-					case <-time.After(100 * time.Millisecond):
+					case <-time.After(200 * time.Millisecond):
 						fired = false
 						if task != nil && task.ProcessState != nil && !task.ProcessState.Exited() {
 							fmt.Println("Stopping Task...")
