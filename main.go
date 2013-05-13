@@ -20,50 +20,56 @@ func main() {
 
 	var hasDash bool = false
 	var nArgs = len(os.Args)
+
 	for n := 1; n < nArgs; n++ {
-		arg := os.Args[n]
+		var arg = os.Args[n]
 		if arg == "--" {
 			hasDash = true
 			continue
 		}
-		tokens := strings.SplitN(arg, "=", 2)
-		flag, value := "", ""
-		switch len(tokens) {
-		case 1:
-			flag = tokens[0]
-			if n < nArgs-1 && !options.IsBool(flag) {
-				value = os.Args[n+1]
-				n++
+
+		var flag, value = "", ""
+		if strings.HasPrefix(arg, "-") {
+			tokens := strings.SplitN(arg, "=", 2)
+			switch len(tokens) {
+			case 1:
+				flag = tokens[0]
+				if n < nArgs-1 && options.Has(flag) && !options.IsBool(flag) {
+					value = os.Args[n+1]
+					n++
+				}
+			case 2:
+				flag = tokens[0]
+				value = tokens[1]
+			default:
+				continue
 			}
-		case 2:
-			flag = tokens[0]
-			value = tokens[1]
-		default:
-			continue
 		}
 
 		// everything after the dash, should be the command arguments
-		if !hasDash && flag[0] == '-' {
-			option := options.Get(flag[1:])
-			if option == nil {
-				log.Fatalf("Invalid option: '%v'\n", flag)
-			} else {
-				if _, ok := option.value.(string); ok {
-					option.value = value
+
+		// everything before the dash "--"
+		if !hasDash {
+			if len(flag) > 0 && flag[0] == '-' {
+				option := options.Get(flag[1:])
+				if option == nil {
+					log.Fatalf("Invalid option: '%v'\n", flag)
 				} else {
-					option.value = true
+					if _, ok := option.value.(string); ok {
+						option.value = value
+					} else {
+						option.value = true
+					}
 				}
-			}
-		} else {
-			if !hasDash {
+			} else {
 				if exists, _ := FileExists(arg); exists {
 					dirArgs = append(dirArgs, arg)
 				} else {
 					log.Printf("Invalid path: '%v'", arg)
 				}
-			} else {
-				cmdArgs = append(cmdArgs, arg)
 			}
+		} else {
+			cmdArgs = append(cmdArgs, arg)
 		}
 	}
 

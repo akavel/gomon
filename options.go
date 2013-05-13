@@ -25,6 +25,15 @@ var options = Options{
 	{"gntp", "127.0.0.1:23053", "The GNTP DSN"},
 }
 
+func (options Options) Has(flag string) bool {
+	for _, option := range options {
+		if option.flag == flag {
+			return true
+		}
+	}
+	return false
+}
+
 func (options Options) Get(flag string) *Option {
 	for _, option := range options {
 		if option.flag == flag {
