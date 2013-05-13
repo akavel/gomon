@@ -31,7 +31,7 @@ func main() {
 		switch len(tokens) {
 		case 1:
 			flag = tokens[0]
-			if n < nArgs - 1 && !options.IsBool(flag) {
+			if n < nArgs-1 && !options.IsBool(flag) {
 				value = os.Args[n+1]
 				n++
 			}
@@ -136,9 +136,16 @@ func main() {
 	}
 
 	for _, dir := range dirArgs {
-		subfolders := Subfolders(dir)
-		for _, f := range subfolders {
-			err = watcher.WatchFlags(f, fsnotify.FSN_ALL)
+		if options.Bool("R") {
+			subfolders := Subfolders(dir)
+			for _, f := range subfolders {
+				err = watcher.WatchFlags(f, fsnotify.FSN_ALL)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		} else {
+			err = watcher.WatchFlags(dir, fsnotify.FSN_ALL)
 			if err != nil {
 				log.Fatal(err)
 			}
