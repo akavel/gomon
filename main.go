@@ -12,9 +12,19 @@ import (
 	"time"
 )
 
-var versionStr = "0.1.0"
+var versionStr = "akavel/0.1.1"
 
 func main() {
+	// after double-dash, commandline args describe a command to call
+	servant := []string{}
+	for i := 1; i < len(os.Args-1); i++ {
+		if os.Args[i] != "--" {
+			continue
+		}
+		servant = os.Args[i+1:]
+		os.Args = os.Args[:i]
+	}
+
 	var dirArgs = []string{}
 	var cmdArgs = []string{}
 
