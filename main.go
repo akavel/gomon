@@ -3,13 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/howeyc/fsnotify"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
-	"time"
 )
 
 var versionStr = "akavel/0.1.1"
@@ -60,27 +57,30 @@ func run() error {
 		}
 		dirs = []string{cwd}
 	}
+	if len(dirs) > 1 {
+		return fmt.Errorf("FIXME: can handle max 1 dir for now")
+	}
 
 	fmt.Println("Watching", dirs, "for", cmd)
 
-	watcher, err := fsnotify.NewWatcher()
+	watcher := Watcher{
+		Excluder: func(path string) bool {
+			included, err := regexp.MatchString(*include, path)
+			if err != nil {
+				log.Println(err)
+				return false
+			}
+			return !included
+		},
+	}
+
+	err := watcher.Start(dirs[0])
 	if err != nil {
 		return err
 	}
 
-	for _, dir := range dirs {
-		subfolders := Subfolders(dir)
-		for _, f := range subfolders {
-			err = watcher.WatchFlags(f, fsnotify.FSN_ALL)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	var wasFailed bool = false
 	var task *exec.Cmd
-
 	runCommand := func(task *exec.Cmd) {
 		err := task.Start()
 		if err != nil {
@@ -101,57 +101,23 @@ func run() error {
 		if wasFailed {
 			wasFailed = false
 			success("Congratulations! It's fixed!")
+		} else {
+			success("Done.")
 		}
 	}
 
-	var fired bool = false
 	for {
-		select {
-		case e := <-watcher.Event:
-			included, err := regexp.MatchString(*include, e.Name)
-			if err != nil {
-				log.Println(err)
-			}
-
-			if !included {
-				continue
-			}
-			log.Println(e.Name)
-
-			if !fired {
-				fired = true
-				go func(dir string) {
-					// duration to avoid to run commands frequency at once
-					select {
-					case <-time.After(200 * time.Millisecond):
-						fired = false
-						if task != nil && task.ProcessState != nil && !task.ProcessState.Exited() {
-							fmt.Println("Stopping Task...")
-							err := task.Process.Kill()
-							if err != nil {
-								log.Println(err)
-							}
-						}
-						fmt.Println("Running Task:", cmd)
-						task = exec.Command(cmd[0], cmd[1:]...)
-						task.Stdout = os.Stdout
-						task.Stderr = os.Stderr
-						if options.Bool("chdir") {
-							task.Dir = dir
-						}
-						runCommand(task)
-					}
-				}(filepath.Dir(e.Name))
-			}
-
-		case err := <-watcher.Error:
-			log.Println("Error:", err)
-		}
+		watcher.Latch.Wait()
+		log.Println("Running Task:", cmd)
+		task = exec.Command(cmd[0], cmd[1:]...)
+		task.Stdout = os.Stdout
+		task.Stderr = os.Stderr
+		runCommand(task)
 	}
 
-	watcher.Close()
+	<-watcher.Quit
 	return nil
 }
 
-var failed = fmt.Println
-var success = fmt.Println
+var failed = log.Println
+var success = log.Println
