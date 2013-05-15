@@ -19,33 +19,39 @@ func main() {
 	if err == nil {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "error: %s", err.Error())
+	fmt.Fprintf(os.Stderr, "error: %s\n", err.Error())
 	os.Exit(1)
 }
 
 func run() error {
-
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [DIR] -- COMMAND [WITH ARGS...]\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-
 	// parse arguments
+
+	opt := flag.NewFlagSet("", flag.ExitOnError)
+	opt.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] [DIR] -- COMMAND [WITH ARGS...]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Where OPTIONS:\n")
+		opt.PrintDefaults()
+	}
+	include := opt.String("include", "\\.(go|c|h)$", "regular expressions specifying file patterns to watch")
+
 	// after double-dash, we expect a command to call on change, with arguments
 	cmd := []string{}
-	dirs := []string{}
+	args := []string{}
 	for i := 1; i < len(os.Args)-1; i++ {
 		if os.Args[i] != "--" {
 			continue
 		}
 		cmd = os.Args[i+1:]
-		dirs = os.Args[1:i]
+		args = os.Args[1:i]
+	}
+	if len(cmd) == 0 {
+		fmt.Fprintf(os.Stderr, "no command specified\n")
+		opt.Usage()
+		os.Exit(1)
 	}
 
-	if len(cmd) == 0 {
-		flag.Usage()
-		return fmt.Errorf("no command to call found")
-	}
+	opt.Parse(args)
+	dirs := opt.Args()
 
 	/*
 		var dirArgs = []string{}
@@ -191,23 +197,15 @@ func run() error {
 	for {
 		select {
 		case e := <-watcher.Event:
-			matched, err := regexp.MatchString("\\.(go|c|h)$", e.Name)
+			included, err := regexp.MatchString(*include, e.Name)
 			if err != nil {
 				log.Println(err)
 			}
 
-			if !matched {
-				if options.Bool("d") {
-					log.Println("Ignore:", e)
-				}
+			if !included {
 				continue
 			}
-
-			if options.Bool("d") {
-				log.Println("Event:", e)
-			} else {
-				log.Println(e.Name)
-			}
+			log.Println(e.Name)
 
 			if !fired {
 				fired = true
