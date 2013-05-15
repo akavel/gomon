@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var versionStr = "0.1.0"
+var versionStr = "akavel/0.1.0"
 
 func main() {
 	var dirArgs = []string{}
@@ -166,9 +166,6 @@ func main() {
 		err = task.Start()
 		if err != nil {
 			log.Println(err)
-			if options.Bool("growl") {
-				notifyFail(options.String("gntp"), err.Error(), "")
-			}
 			failed("Failed!")
 			wasFailed = true
 			return
@@ -176,9 +173,6 @@ func main() {
 		err = task.Wait()
 		if err != nil {
 			log.Println(err)
-			if options.Bool("growl") {
-				notifyFail(options.String("gntp"), err.Error(), "")
-			}
 			failed("Failed!")
 			wasFailed = true
 			return
@@ -187,9 +181,6 @@ func main() {
 		// fixed
 		if wasFailed {
 			wasFailed = false
-			if options.Bool("growl") {
-				notifyFixed(options.String("gntp"), "Congratulations! It's fixed!", "")
-			}
 			success("Congratulations! It's fixed!")
 		}
 	}
@@ -249,3 +240,6 @@ func main() {
 
 	watcher.Close()
 }
+
+var failed = fmt.Println
+var success = fmt.Println
