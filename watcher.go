@@ -75,6 +75,7 @@ func (w *Watcher) Start(path string) (err2 error) {
 				if w.Excluder != nil && w.Excluder(ev.Name) {
 					break
 				}
+				log.Println(ev.String())
 				w.Latch.Open()
 				processSubdir(watcher, ev)
 				if ev.IsDelete() && ev.Name == path {

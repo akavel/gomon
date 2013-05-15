@@ -108,6 +108,12 @@ func run() error {
 
 	for {
 		watcher.Latch.Wait()
+		select {
+		case <-watcher.Quit:
+			return nil
+		default:
+		}
+
 		log.Println("Running Task:", cmd)
 		task = exec.Command(cmd[0], cmd[1:]...)
 		task.Stdout = os.Stdout
@@ -115,7 +121,6 @@ func run() error {
 		runCommand(task)
 	}
 
-	<-watcher.Quit
 	return nil
 }
 
